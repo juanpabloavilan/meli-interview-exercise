@@ -42,28 +42,7 @@ func (ctrl PriceStatsController) SetRoutes(r *gin.Engine) {
 	v1 := r.Group("api/v1")
 	{
 		v1.POST("product-stats/event/detect-price-anomaly", ctrl.DetectAnomaly)
-		v1.PUT("product-stats/event/update-price-stats", ctrl.UpdateStats)
 	}
-}
-
-func (ctrl PriceStatsController) UpdateStats(ctx *gin.Context) {
-	var payload UpdateStatsRequest
-
-	if err := ctx.BindJSON(payload); err != nil {
-		slog.ErrorContext(ctx, err.Error())
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"statusCode": http.StatusBadRequest,
-			"message":    err.Error(),
-		})
-	}
-
-	// item := models.ItemPriceHistory{
-	// 	ItemID:       payload.ItemID,
-	// 	PriceHistory: nil,
-	// }
-
-	// ctrl.anomalyDetectionService.UpdateStats(ctx, payload)
-
 }
 
 func (ctrl PriceStatsController) DetectAnomaly(ctx *gin.Context) {
@@ -101,7 +80,7 @@ func (ctrl PriceStatsController) DetectAnomaly(ctx *gin.Context) {
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error())
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"statusCode": http.StatusNotFound,
+			"statusCode": http.StatusInternalServerError,
 			"message":    "failed to detect anomaly",
 		})
 		return

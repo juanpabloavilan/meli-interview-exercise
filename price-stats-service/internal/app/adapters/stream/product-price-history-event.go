@@ -90,9 +90,8 @@ func (s *ProductPricesStreamProcessor) splitIntoBatches(ctx context.Context, eve
 	var (
 		total               = 0
 		processedBatchItems = 0
-		// right is the pointer of the current event. It increases as more events arrive but it resets to 0 when starting a new batch
-		right       = 0
-		batchBuffer = make([]models.ItemPrice, s.batchSize)
+		rightPtr            = 0
+		batchBuffer         = make([]models.ItemPrice, s.batchSize)
 	)
 
 	var event models.ItemPrice
@@ -102,20 +101,21 @@ func (s *ProductPricesStreamProcessor) splitIntoBatches(ctx context.Context, eve
 		case <-ctx.Done():
 			return
 		case <-time.Tick(s.batchWindow):
-			// process batch window
+			// batch window time span is reached
 			slog.DebugContext(ctx, "flushing window TICKER 1 SECOND", "batch", s.batchSize, "processed", processedBatchItems, "total", total)
-			s.processBatch(ctx, batchBuffer[0:right])
-			right, processedBatchItems = 0, 0
+			s.processBatch(ctx, batchBuffer[0:rightPtr])
+			rightPtr, processedBatchItems = 0, 0
+
 		case event = <-eventsCh:
-			batchBuffer[right] = event
+			batchBuffer[rightPtr] = event
 
 			if processedBatchItems == s.batchSize-1 {
-				// process batch window
+				// batch window size is reached
 				slog.DebugContext(ctx, "flushing window BATCH SIZE REACHED", "batch", s.batchSize, "processed", processedBatchItems, "total", total)
 				s.processBatch(ctx, batchBuffer)
-				right, processedBatchItems = 0, 0
+				rightPtr, processedBatchItems = 0, 0
 			} else {
-				right++
+				rightPtr++
 				processedBatchItems++
 			}
 			total++

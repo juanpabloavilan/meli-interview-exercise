@@ -17,22 +17,25 @@ down:
 	@echo "Done!"
 
 build-all:
-	$(MAKE) -j2 build-price-stats build-product-history
+	$(MAKE) -j2 build-price-stats build-product-history build-docker
 
 test-all:
 	$(MAKE) -j2 test-price-stats test-product-history
 
+build-docker:
+	docker-compose build --no-cache product-history price-stats
+
 ## build-price-stats: builds the price-stats-service binary as a linux executable
 build-price-stats:
 	@echo "Building price-stats-service binary..."
-	cd ./price-stats-service && env GOOS=linux CGO_ENABLED=0 go build -o ${PRICE_STATS_BINARY} ./cmd/api
+	cd ./price-stats-service && env GOOS=linux CGO_ENABLED=0 go build -o ${PRICE_STATS_BINARY} ./cmd
 	@echo "Done!"
 
 
 ## build-product-history: builds the product-history-service binary as a linux executable
 build-product-history:
 	@echo "Building product-history-service binary..."
-	cd ./product-history-service  && env GOOS=linux go build -o ${PRODUCT_HISTORY_BINARY} ./cmd/api
+	cd ./product-history-service  && env GOOS=linux go build -o ${PRODUCT_HISTORY_BINARY} ./cmd
 	@echo "Done!"
 
 test-price-stats:

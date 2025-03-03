@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
-	"net/http"
+	"log/slog"
+	"os"
 
-	httpcontroller "github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/adapters/primary/http"
-	httpclient "github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/adapters/secondary/http"
-	mongorepo "github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/adapters/secondary/mongodb"
+	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/adapters/controllers"
+	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/adapters/repositories"
 	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/config"
 	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/core/services"
 	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/infrastructure"
+	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/pkg/logger"
 )
 
 func main() {
@@ -22,13 +23,20 @@ func main() {
 		panic(err.Error())
 	}
 
+	customHandler := &logger.Handler{
+		Handler: slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource: true,
+		}),
+	}
+
+	logger := slog.New(customHandler)
+	slog.SetDefault(logger)
+
 	router := infrastructure.NewRouter()
 
-	priceHistoryRepo := mongorepo.NewProductPriceHistoryRepo(db)
-	priceStatsHTTPClient := httpclient.NewProductPriceStatsHTTPClient(config.PriceStatsBaseURL, http.DefaultClient)
-
-	service := services.NewProductPriceHistoryService(priceHistoryRepo, priceStatsHTTPClient)
-	controller := httpcontroller.NewProductPriceController(router, service)
+	priceHistoryRepo := repositories.NewProductPriceHistoryRepo(db)
+	service := services.NewProductPriceHistoryService(priceHistoryRepo)
+	controller := controllers.NewProductPriceController(router, service)
 
 	controller.SetRoutes(router)
 	infrastructure.Run(router, config.GinPort)

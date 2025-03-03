@@ -6,55 +6,46 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/core/models"
-	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/pkg"
-	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/ports"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/core/models"
+	filereader "github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/pkg/file-reader"
+	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/ports"
 )
 
 const (
 	maxBatchSize = 10000
 )
 
-type ProductPriceHistoryService interface {
-	ImportFromCSVFile(ctx context.Context, reader io.Reader) error
-}
-
 type productPriceHistoryService struct {
-	repo             ports.ProductHistoryRepo
-	priceStatsClient ports.PriceStatsClient
+	repo ports.ProductHistoryRepo
 }
 
-func NewProductPriceHistoryService(r ports.ProductHistoryRepo, psc ports.PriceStatsClient) ProductPriceHistoryService {
+func NewProductPriceHistoryService(r ports.ProductHistoryRepo) ProductPriceHistoryService {
 	return &productPriceHistoryService{
-		repo:             r,
-		priceStatsClient: psc,
+		repo: r,
 	}
 }
 
 func (s *productPriceHistoryService) ImportFromCSVFile(ctx context.Context, reader io.Reader) error {
 	var (
-		// Set of impacted items
-		impactedProductItems map[string][]models.ProducPriceHistory
-		rows                 []models.ProducPriceHistory
-		row                  *models.ProducPriceHistory
-		item                 any
-		csvReader            *csv.Reader
-		unmarshaller         pkg.CSVRowUnmarshaller[models.ProducPriceHistory]
-		rowNumber            int64
-		err                  error
-		ok                   bool
+		rows         []models.ProducPriceHistory
+		row          *models.ProducPriceHistory
+		item         any
+		csvReader    *csv.Reader
+		unmarshaller filereader.CSVRowUnmarshaller[models.ProducPriceHistory]
+		rowNumber    int64
+		err          error
 	)
 	csvReader = csv.NewReader(reader)
 	csvReader.ReuseRecord = true
 
-	unmarshaller, err = pkg.NewCSVRowUnmarshaller[models.ProducPriceHistory](csvReader)
+	unmarshaller, err = filereader.NewCSVRowUnmarshaller[models.ProducPriceHistory](csvReader)
 	if err != nil {
 		return err
 	}
 
 	rowNumber = 0
-	impactedProductItems = make(map[string][]models.ProducPriceHistory)
 
 	for {
 		item, err = unmarshaller.ReadUnmarshalCSVRow()
@@ -77,24 +68,11 @@ func (s *productPriceHistoryService) ImportFromCSVFile(ctx context.Context, read
 			return err
 		}
 
-		if _, ok = impactedProductItems[row.ItemID]; !ok {
-			impactedProductItems[row.ItemID] = make([]models.ProducPriceHistory, 0)
-		}
-		impactedProductItems[row.ItemID] = append(impactedProductItems[row.ItemID], *row)
-
 		rows = append(rows, *row)
 
 	}
 
 	if err := s.loadRowsInBatches(ctx, rows); err != nil {
-		slog.ErrorContext(ctx, err.Error())
-		return err
-	}
-
-	opts := ports.UpdateStatsOpts{
-		HistoryPerItem: impactedProductItems,
-	}
-	if err := s.priceStatsClient.UpdateStats(ctx, opts); err != nil {
 		slog.ErrorContext(ctx, err.Error())
 		return err
 	}

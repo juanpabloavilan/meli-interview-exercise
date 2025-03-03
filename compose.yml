@@ -17,17 +17,31 @@ services:
     entrypoint: [ "bash", "./scripts/mongo_setup.sh"]
   
   redis:
-    image: redis:alpine
+    image: redis:latest
     ports: 
      - 6379:6379
-  # product-history:
-  #   build:
-  #     context: ./product-history-service
-  #     dockerfile: ./Dockerfile
-  #   restart: always
-  #   env_file: ./product-history-service/.env
-  #   ports:
-  #     - 8080:80
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 2s
+      retries: 10
+
+  product-history:
+    build:
+      context: ./product-history-service
+      dockerfile: ./Dockerfile
+    restart: always
+    env_file: ./product-history-service/.env
+    ports:
+      - 8080:80
+    depends_on:
+        redis: 
+          condition: service_healthy
+        mongo1:
+          condition: service_started
+        mongosetup:
+          condition: service_started
+
   price-stats:
     build:
       context: ./price-stats-service
@@ -36,6 +50,13 @@ services:
     env_file: ./price-stats-service/.env
     ports:
       - 8081:80
+    depends_on:
+      redis: 
+        condition: service_healthy
+      mongo1:
+        condition: service_started
+      mongosetup:
+        condition: service_started
 
   
 

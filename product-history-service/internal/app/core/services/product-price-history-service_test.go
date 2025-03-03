@@ -13,7 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 
-	mongorepo "github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/adapters/secondary/mongodb"
+	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/adapters/repositories"
 	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/infrastructure"
 	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/internal/app/ports"
 	"github.com/juanpabloavilan/meli-interview-exercise/product-history-service/mocks"
@@ -54,7 +54,7 @@ func TestIntegrationImportFromCSVFile(t *testing.T) {
 		{
 			name: "should create 1000 documents from file",
 			fields: fields{
-				mongorepo.NewProductPriceHistoryRepo(db),
+				repositories.NewProductPriceHistoryRepo(db),
 			},
 			args: args{
 				ctx,
@@ -65,7 +65,7 @@ func TestIntegrationImportFromCSVFile(t *testing.T) {
 		{
 			name: "should create 175000 documents from file",
 			fields: fields{
-				mongorepo.NewProductPriceHistoryRepo(db),
+				repositories.NewProductPriceHistoryRepo(db),
 			},
 			args: args{
 				ctx,
@@ -81,7 +81,7 @@ func TestIntegrationImportFromCSVFile(t *testing.T) {
 			}
 			t.Cleanup(func() {
 				log.Printf("CLEANING UP")
-				_, err := db.Collection(mongorepo.ProducPriceHistoryCollection).DeleteMany(ctx, bson.D{})
+				_, err := db.Collection(repositories.ProducPriceHistoryCollection).DeleteMany(ctx, bson.D{})
 				assert.NoError(t, err)
 			})
 
@@ -92,7 +92,7 @@ func TestIntegrationImportFromCSVFile(t *testing.T) {
 			if err := s.ImportFromCSVFile(tt.args.ctx, file); (err != nil) != tt.wantErr {
 				t.Errorf("productPriceHistoryService.ImportFromCSVFile() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			totalRows, err := db.Collection(mongorepo.ProducPriceHistoryCollection).CountDocuments(ctx, bson.D{}, nil)
+			totalRows, err := db.Collection(repositories.ProducPriceHistoryCollection).CountDocuments(ctx, bson.D{}, nil)
 			assert.NoError(t, err)
 
 			assert.Equal(t, totalRows, tt.wantRows)
@@ -107,7 +107,7 @@ func BenchmarkIntegrationImportFromCSVFile(b *testing.B) {
 	repo := mocks.NewProductHistoryRepo(b)
 	repo.EXPECT().AddMany(ctx, mock.Anything).Return(nil).After(10 * time.Millisecond)
 
-	s := &productPriceHistoryService{repo, nil}
+	s := &productPriceHistoryService{repo}
 
 	for i := 0; i < b.N; i++ {
 		file, err := os.Open("./testdata/test-product-price-history-10-rows.csv")

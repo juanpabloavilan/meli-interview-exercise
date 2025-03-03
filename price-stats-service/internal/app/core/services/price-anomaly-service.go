@@ -17,12 +17,6 @@ var (
 	ErrInvalidDetectionAlgo = errors.New("invalid anomaly detection algorithm")
 )
 
-type AnomalyDetectionService interface {
-	UpdateStats(ctx context.Context, item models.ItemPriceHistory) error
-	DetectAnomaly(ctx context.Context, itemID string, price float64) (*bool, error)
-	SetStrategy(algorithm models.AnomalyDetectionAlgo) error
-}
-
 type priceAnomalyDetectionService struct {
 	strategy    AnomalyDetector
 	strategyMap map[models.AnomalyDetectionAlgo]AnomalyDetector

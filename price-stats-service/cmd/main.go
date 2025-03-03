@@ -16,7 +16,9 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	config := config.NewAppConfig()
 	config.GetSecrets()
 
@@ -35,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	mongoDB, err := infrastructure.NewMongoDB(ctx, config.MongoConnectionString, "Test")
+	mongoDB, err := infrastructure.NewMongoDB(ctx, config.MongoConnectionString, config.MongoDBName)
 	if err != nil {
 		panic(err)
 	}

@@ -10,4 +10,4 @@ FROM alpine:latest
 
 WORKDIR /app
 COPY --from=builder /build/product-history-service ./product-history-service
-CMD ["/cmd/product-history-service"]
+CMD ["/app/product-history-service"]

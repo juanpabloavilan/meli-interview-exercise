@@ -1,0 +1,41 @@
+services:
+  mongo1:
+    image: mongo:6
+    hostname: mongo1
+    container_name: mongo1
+    ports:
+      - 27017:27017
+    entrypoint: ["mongod", "--replSet", "myReplicaSet", "--bind_ip", "localhost,mongo1"]
+
+  mongosetup:
+    image: mongo:6
+    depends_on:
+      - mongo1
+    volumes:
+      - ./scripts:/scripts
+    restart: "no"
+    entrypoint: [ "bash", "./scripts/mongo_setup.sh"]
+  
+  redis:
+    image: redis:alpine
+    ports: 
+     - 6379:6379
+  # product-history:
+  #   build:
+  #     context: ./product-history-service
+  #     dockerfile: ./Dockerfile
+  #   restart: always
+  #   env_file: ./product-history-service/.env
+  #   ports:
+  #     - 8080:80
+  price-stats:
+    build:
+      context: ./price-stats-service
+      dockerfile: ./Dockerfile
+    restart: always
+    env_file: ./price-stats-service/.env
+    ports:
+      - 8081:80
+
+  
+
